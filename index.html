@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sudoku Solver</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    #container {
+      background: rgba(128, 128, 128, 0.08);
+      backdrop-filter: blur(60px);
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      max-width: 600px;
+      width: 100%;
+      animation: slideIn 0.5s ease-out;
+      position: relative;
+      z-index: 1;
+      filter: blur(0);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #ffffff;
+      font-size: 2.5em;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-align: center;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.95em;
+      margin-bottom: 30px;
+      font-weight: 500;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin: 0 auto 30px;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4),
+                  0 0 80px rgba(255, 255, 255, 0.5),
+                  0 0 140px rgba(102, 126, 234, 0.6),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+      animation: pulseGlow 3s ease-in-out infinite;
+      position: relative;
+      z-index: 10;
+      transform: translateZ(50px);
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4),
+                    0 0 80px rgba(255, 255, 255, 0.5),
+                    0 0 140px rgba(102, 126, 234, 0.6),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+        transform: translateZ(50px) scale(1);
+      }
+      50% {
+        box-shadow: 0 35px 90px rgba(0, 0, 0, 0.5),
+                    0 0 100px rgba(255, 255, 255, 0.6),
+                    0 0 160px rgba(102, 126, 234, 0.7),
+                    inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+        transform: translateZ(50px) scale(1.02);
+      }
+    }
+
+    td {
+      border: 1px solid #e2e8f0;
+      height: 50px;
+      width: 50px;
+      text-align: center;
+      font-size: 1.5em;
+      font-weight: 600;
+      cursor: text;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    td:hover {
+      background-color: #f7fafc;
+    }
+    
+    td:focus {
+      background: linear-gradient(135deg, #ebf4ff 0%, #f0e7ff 100%);
+      outline: none;
+      box-shadow: inset 0 0 0 2px #667eea;
+      z-index: 10;
+    }
+
+    /* 3x3 grid bold borders */
+    tr:nth-child(3n) td {
+      border-bottom: 3px solid #4a5568;
+    }
+
+    td:nth-child(3n) {
+      border-right: 3px solid #4a5568;
+    }
+    
+    table tr:first-child td { 
+      border-top: 3px solid #4a5568; 
+    }
+    table tr:last-child td { 
+      border-bottom: 3px solid #4a5568; 
+    }
+    table td:first-child { 
+      border-left: 3px solid #4a5568; 
+    }
+    table td:last-child { 
+      border-right: 3px solid #4a5568; 
+    }
+    
+    .given-cell {
+      color: #2d3748;
+      font-weight: 700;
+      background-color: #edf2f7;
+    }
+    
+    .user-input {
+      color: #e53e3e;
+      font-weight: 700;
+    }
+    
+    .solved-cell {
+      color: #667eea;
+      font-weight: 600;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .dev-info-container {
+      text-align: center;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    #dev-info-button, #contact-button {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 10px 24px;
+      font-size: 0.9em;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    #dev-info-button:hover, #contact-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    button {
+      font-family: 'Inter', sans-serif;
+      font-size: 1em;
+      font-weight: 600;
+      padding: 14px 32px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    
+    button:hover::before {
+      transform: translateX(0);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+
+    #solve-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      flex: 1;
+    }
+
+    #clear-button {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      flex: 1;
+    }
+
+    @media (max-width: 600px) {
+      #container {
+        padding: 25px;
+      }
+
+      h1 {
+        font-size: 2em;
+      }
+
+      td {
+        height: 40px;
+        width: 40px;
+        font-size: 1.2em;
+      }
+
+      button {
+        padding: 12px 24px;
+        font-size: 0.9em;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="container">
+    <h1>Sudoku Solver</h1>
+    <p class="subtitle">A project by Priyanshu & Sarbani ✨</p>
+
+    <table id="sudoku-board">
+      <tbody>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+        <tr> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> <td contenteditable="true"></td> </tr>
+      </tbody>
+    </table>
+    
+    <div class="button-container">
+      <button id="solve-button">✨ Solve Puzzle</button>
+      <button id="clear-button">🔄 Clear Board</button>
+    </div>
+
+    <div class="dev-info-container">
+      <button id="dev-info-button">👨‍💻 Developer Info</button>
+      <button id="contact-button">📧 Contact</button>
+    </div>
+  </div>
+
+<script type="text/javascript">
+  // Simple sudoku solver
+  var SudokuSolver = {
+    solve: function(boardString) {
+      var board = this.stringToArray(boardString);
+      if (this.solveBoard(board)) {
+        return this.arrayToString(board);
+      }
+      return null;
+    },
+    
+    stringToArray: function(str) {
+      var board = [];
+      for (var i = 0; i < 9; i++) {
+        board[i] = [];
+        for (var j = 0; j < 9; j++) {
+          var char = str[i * 9 + j];
+          board[i][j] = (char >= '1' && char <= '9') ? parseInt(char) : 0;
+        }
+      }
+      return board;
+    },
+    
+    arrayToString: function(board) {
+      var str = '';
+      for (var i = 0; i < 9; i++) {
+        for (var j = 0; j < 9; j++) {
+          str += board[i][j];
+        }
+      }
+      return str;
+    },
+    
+    isValid: function(board, row, col, num) {
+      for (var x = 0; x < 9; x++) {
+        if (board[row][x] === num || board[x][col] === num) {
+          return false;
+        }
+      }
+      var startRow = row - row % 3;
+      var startCol = col - col % 3;
+      for (var i = 0; i < 3; i++) {
+        for (var j = 0; j < 3; j++) {
+          if (board[i + startRow][j + startCol] === num) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+    
+    solveBoard: function(board) {
+      for (var row = 0; row < 9; row++) {
+        for (var col = 0; col < 9; col++) {
+          if (board[row][col] === 0) {
+            for (var num = 1; num <= 9; num++) {
+              if (this.isValid(board, row, col, num)) {
+                board[row][col] = num;
+                if (this.solveBoard(board)) {
+                  return true;
+                }
+                board[row][col] = 0;
+              }
+            }
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+  };
+
+  document.getElementById("sudoku-board").addEventListener("keyup", function(event) {
+    if(event.target && event.target.nodeName == "TD") {
+      var validNum = /[1-9]/;
+      var tdEl = event.target;
+      if (tdEl.innerText.length > 0 && validNum.test(tdEl.innerText[0])) {
+        tdEl.innerText = tdEl.innerText[0];
+        tdEl.classList.add("user-input");
+      } else {
+        tdEl.innerText = "";
+        tdEl.classList.remove("user-input");
+      }
+    }
+  });
+
+  document.getElementById("solve-button").addEventListener("click", function(event) {
+    var boardString = boardToString();
+    var solution = SudokuSolver.solve(boardString);
+    if (solution) {
+      stringToBoard(solution, boardString);
+    } else {
+      alert("Invalid or unsolvable board! 🤔");
+    }
+  })
+
+  document.getElementById("clear-button").addEventListener("click", clearBoard);
+
+  document.getElementById("dev-info-button").addEventListener("click", function() {
+    alert("🎓 Developed by:\n\n👨‍💻 Priyanshu\n👩‍💻 Sarbani\n\nBuilt with passion and code! ✨");
+  });
+
+  document.getElementById("contact-button").addEventListener("click", function() {
+    alert("📧 Get in touch:\n\nPriyanshu: priyanshuparashar381@gmail.com\nSarbani: ssarbani0330@gmail.com\n\nFeel free to reach out! 💌");
+  });
+
+  function clearBoard() {
+    var tds = document.getElementsByTagName("td");
+    for (var i = 0; i < tds.length; i++) {
+      tds[i].innerText = "";
+      tds[i].classList.remove("given-cell", "solved-cell", "user-input");
+    }
+  }
+
+  function boardToString() {
+    var string = "";
+    var validNum = /[1-9]/;
+    var tds = document.getElementsByTagName("td");
+    for (var i = 0; i < tds.length; i++) {
+      if (validNum.test(tds[i].innerText[0])) {
+        string += tds[i].innerText;
+      } else {
+        string += "-";
+      }
+    }
+    return string;
+  }
+
+  function stringToBoard(solutionString, originalString) {
+    var validNum = /[1-9]/;
+    var cells = solutionString.split("");
+    var tds = document.getElementsByTagName("td");
+    
+    for (var i = 0; i < tds.length; i++) {
+      tds[i].classList.remove("given-cell", "solved-cell", "user-input");
+      
+      if (validNum.test(cells[i])) {
+        tds[i].innerText = cells[i];
+        
+        if (originalString[i] === "-") {
+          tds[i].classList.add("solved-cell");
+        } else {
+          tds[i].classList.add("given-cell");
+        }
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
